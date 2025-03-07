@@ -22,30 +22,37 @@ def get_least_active_gpu():
     """Always use GPU device 2."""
     return 2
 
-# Check CUDA availability (we might fall back to CPU if needed)
-if torch.cuda.is_available():
-    # Force GPU 2
-    device = "cuda:2" 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-    print(f"Using CUDA device 2: {torch.cuda.get_device_name(2)}")
-    
-    # Verify we're actually using it
-    torch.cuda.set_device(2)
-    print(f"Active GPU: {torch.cuda.current_device()}")
-    
-    # Reserve maximum memory immediately
-    with torch.no_grad():
-        # Get total memory on GPU 2
-        total_memory = torch.cuda.get_device_properties(2).total_memory
-        # Reserve 90% of it
-        reserve_size = int(0.9 * total_memory)
-        # Create a tensor to hold the reservation
-        dummy = torch.empty(reserve_size, dtype=torch.uint8, device="cuda:2")
-        print(f"Reserved {reserve_size/1024**3:.1f}GB GPU memory")
-else:
-    # Fall back to CPU
-    device = "cpu" 
-    print("CUDA not available, using CPU instead")
+# Check if CUDA is available and accessible
+try:
+    if torch.cuda.is_available():
+        # Force GPU 2
+        device = "cuda:2" 
+        os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+        print(f"Using CUDA device 2: {torch.cuda.get_device_name(2)}")
+        
+        # Verify we're actually using it
+        torch.cuda.set_device(2)
+        print(f"Active GPU: {torch.cuda.current_device()}")
+        
+        # Reserve maximum memory immediately
+        with torch.no_grad():
+            # Get total memory on GPU 2
+            total_memory = torch.cuda.get_device_properties(2).total_memory
+            # Reserve 90% of it
+            reserve_size = int(0.9 * total_memory)
+            # Create a tensor to hold the reservation
+            dummy = torch.empty(reserve_size, dtype=torch.uint8, device="cuda:2")
+            print(f"Reserved {reserve_size/1024**3:.1f}GB GPU memory")
+    else:
+        # Fall back to CPU if CUDA not available
+        device = "cpu"
+        print("CUDA not available, using CPU instead.")
+        print("Speech synthesis will be much slower without GPU acceleration.")
+except Exception as e:
+    # Handle permission issues or other CUDA errors
+    device = "cpu"
+    print(f"Error accessing CUDA: {e}")
+    print("Falling back to CPU mode (speech synthesis will be much slower).")
     
 print(f"Using device: {device}")
 
@@ -56,13 +63,17 @@ try:
     primary_model_name = "tts_models/en/ljspeech/tacotron2-DDC"
     multi_speaker_model_name = "tts_models/en/vctk/vits"
     
-    # Note: We already reserved maximum GPU memory earlier
-    if torch.cuda.is_available():
+    # Note: We already reserved maximum GPU memory earlier if possible
+    if device.startswith("cuda"):
         print(f"Using maximum GPU memory for models")
         print(f"Current memory usage: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
         
-        # Store the dummy tensor in app state to prevent garbage collection
-        app.state.reserved_memory = dummy
+        # Store the dummy tensor in app state to prevent garbage collection if it exists
+        if 'dummy' in locals():
+            app.state.reserved_memory = dummy
+            print("Memory reservation is active")
+    else:
+        print("Running in CPU mode - no GPU memory to reserve")
     
     # Default to Tacotron2-DDC with HiFiGAN vocoder (ultra-high quality female voice)
     print(f"Loading primary ultra-high-quality model: {primary_model_name}...")
