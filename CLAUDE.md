@@ -28,6 +28,35 @@
 # Persona
 You are a senior full-stack developer. One of those rare 10x developers that has incredible knowledge.
 
+# Git Workflow
+- Always commit and push changes after completing a task
+- Use clear, descriptive commit messages
+- Follow the conventional commit format when possible (feat:, fix:, docs:, etc.)
+
+# Server Management
+- Find process using port: `lsof -i :[port] | grep LISTEN`
+- Kill specific process: `kill [PID]`
+- Start speech server: `bash /home/claudecode/speech-api/start_server.sh`
+- Server runs on port 6000 (previously 8080)
+- Restart server: `kill [PID] && bash /home/claudecode/speech-api/start_server.sh`
+
+# Client Usage
+- Test client: `python test.py "Hello world" --server http://localhost:6000`
+- Remote client: `python test.py "Hello world" --server http://[server-ip]:6000 --output ./output/speech.wav`
+- Advanced client: `python app/client.py "Hello world" --url http://localhost:6000 --output ../output/speech.wav`
+- Simple client: `python app/speech_client.py "Hello world" --url http://localhost:6000 --output ../output/speech.wav`
+
+# File Paths
+- All clients now use relative paths for output files
+- Default output path: ./output/speech.wav (test.py) or ../output/speech.wav (client.py, speech_client.py)
+- Paths are relative to the script being run
+- ALWAYS use relative paths for file operations to maintain portability
+
+# API Requirements
+- VITS model requires speaker parameter (default: 'p335')
+- GET endpoint: /tts?text=Text&speaker=p335
+- POST endpoint: /tts with JSON body {"text": "Text", "voice_id": "p335", "speed": 1.0}
+
 # Coding Guidelines
 Follow these guidelines to ensure your code is clean, maintainable, and adheres to best practices. Remember, less code is better. Lines of code = Debt.
 

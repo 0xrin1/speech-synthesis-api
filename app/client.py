@@ -6,7 +6,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import io
 
-def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True):
+def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True, speaker="p335"):
     """
     Send text to the speech API and either save or play the resulting audio.
     
@@ -15,6 +15,7 @@ def speak_text(text, server_url="http://localhost:8000", output_file=None, play_
         server_url (str): URL of the speech synthesis server
         output_file (str, optional): Path to save the WAV file. If None, don't save.
         play_audio (bool): Whether to play the audio immediately
+        speaker (str): Speaker ID for multi-speaker models (default: p335)
         
     Returns:
         bool: True if successful, False otherwise
@@ -23,7 +24,7 @@ def speak_text(text, server_url="http://localhost:8000", output_file=None, play_
         # Simple GET request
         response = requests.get(
             f"{server_url}/tts", 
-            params={"text": text},
+            params={"text": text, "speaker": speaker},
             stream=True
         )
         
@@ -122,22 +123,36 @@ def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Speech Synthesis API Client")
     parser.add_argument("text", type=str, help="Text to convert to speech")
-    parser.add_argument("--url", type=str, default="http://localhost:8000", help="URL of the speech API server")
-    parser.add_argument("--output", "-o", type=str, help="Output WAV file path")
+    parser.add_argument("--url", type=str, default="http://localhost:6000", help="URL of the speech API server")
+    parser.add_argument("--output", "-o", type=str, default="../output/speech.wav", help="Output WAV file path")
     parser.add_argument("--no-play", action="store_true", help="Don't play the audio")
     parser.add_argument("--voice", type=str, help="Voice ID to use (if supported)")
+    parser.add_argument("--speaker", type=str, default="p335", help="Speaker ID for multi-speaker models (default: p335)")
     parser.add_argument("--speed", type=float, default=1.0, help="Speech speed factor (1.0 is normal)")
     
     args = parser.parse_args()
+    
+    # Process output path if specified
+    output_path = None
+    if args.output:
+        # Convert relative path to absolute path if needed
+        output_path = args.output
+        if not os.path.isabs(output_path):
+            # Make relative to current script location
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            output_path = os.path.normpath(os.path.join(script_dir, output_path))
+            
+        # Create output directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     if args.voice or args.speed != 1.0:
         # Use POST endpoint for advanced features
         post_speak_text(
             args.text,
-            voice_id=args.voice,
+            voice_id=args.voice if args.voice else args.speaker,
             speed=args.speed,
             server_url=args.url,
-            output_file=args.output,
+            output_file=output_path,
             play_audio=not args.no_play
         )
     else:
@@ -145,6 +160,7 @@ if __name__ == "__main__":
         speak_text(
             args.text,
             server_url=args.url,
-            output_file=args.output,
-            play_audio=not args.no_play
+            output_file=output_path,
+            play_audio=not args.no_play,
+            speaker=args.speaker
         )

@@ -55,14 +55,22 @@ def read_root():
     }
 
 @app.get("/tts")
-def text_to_speech(text: str = Query(..., description="Text to convert to speech")):
+def text_to_speech(
+    text: str = Query(..., description="Text to convert to speech"),
+    speaker: str = Query(None, description="Speaker ID for multi-speaker models")
+):
     """Convert text to speech using GET request."""
     if tts is None:
         raise HTTPException(status_code=500, detail="TTS model failed to load")
     
     try:
+        # Set up kwargs for TTS
+        kwargs = {}
+        if speaker and hasattr(tts, "speakers"):
+            kwargs["speaker"] = speaker
+        
         # Generate speech
-        wav = tts.tts(text=text)
+        wav = tts.tts(text=text, **kwargs)
         
         # Convert numpy array to bytes
         wav_bytes = io.BytesIO()
