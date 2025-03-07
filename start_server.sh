@@ -91,24 +91,28 @@ else
     export LOGLEVEL="INFO"
 fi
 
-# Check if port is already in use
+# Check if port is already in use (need sudo for this)
 PORT=6000
 if [ "$MODE" = "development" ]; then
     PORT=8080
 fi
 
-# Check and kill any process using our port
-if lsof -i:${PORT} > /dev/null; then
-    echo -e "${BLUE}Port ${PORT} is already in use. Stopping existing process...${NC}"
-    # Find PID of process using our port
-    PID=$(lsof -t -i:${PORT})
-    if [ ! -z "$PID" ]; then
-        echo -e "${BLUE}Stopping process ${PID}...${NC}"
-        kill ${PID}
-        # Wait for the port to be freed
-        sleep 3
+# Use sudo to check for port usage and kill the process
+echo -e "${BLUE}Checking if port ${PORT} is already in use...${NC}"
+sudo -S bash -c "
+    if lsof -i:${PORT} > /dev/null 2>&1; then
+        echo -e '${BLUE}Port ${PORT} is already in use. Stopping existing process...${NC}'
+        # Find PID of process using our port
+        PID=\$(lsof -t -i:${PORT})
+        if [ ! -z \"\$PID\" ]; then
+            echo -e '${BLUE}Stopping process \$PID...${NC}'
+            kill -9 \$PID
+            sleep 3
+        fi
+    else
+        echo -e '${GREEN}Port ${PORT} is available.${NC}'
     fi
-fi
+" <<< "claudecode"
 
 # Verify GPU is available, exit if not
 if ! command -v nvidia-smi &> /dev/null; then
