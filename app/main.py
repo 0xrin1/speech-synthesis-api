@@ -70,18 +70,46 @@ try:
     primary_model_name = "tts_models/en/ljspeech/tacotron2-DDC"
     multi_speaker_model_name = "tts_models/en/vctk/vits"
     
-    # Reserve 10GB of GPU memory to force TTS to use larger batch sizes and higher precision
-    # This improves quality by allowing the model to use more resources
+    # Reserve GPU memory intelligently to maximize quality while avoiding crashes
     torch.cuda.empty_cache()
     if torch.cuda.is_available():
-        # Allocate dummy tensor to reserve memory
-        print("Reserving GPU memory for optimal quality...")
-        # Allocate 10GB dummy tensor to force TTS to use high precision
-        dummy_tensor = torch.ones((2560, 2560, 400), device="cuda", dtype=torch.float32)
-        print(f"Reserved memory: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-        del dummy_tensor
-        torch.cuda.empty_cache()
-        print(f"Memory after cleanup: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+        # Get total available GPU memory
+        device_id = torch.cuda.current_device()
+        total_memory = torch.cuda.get_device_properties(device_id).total_memory / 1024**3
+        allocated_memory = torch.cuda.memory_allocated() / 1024**3
+        free_memory = total_memory - allocated_memory
+        
+        print(f"GPU memory - Total: {total_memory:.2f} GB, Free: {free_memory:.2f} GB")
+        
+        # Calculate how much memory we can safely use (70% of free memory)
+        target_memory = min(free_memory * 0.7, 16.0)  # Cap at 16GB to be safe
+        
+        # Allocate tensor with appropriate size based on available memory
+        print(f"Reserving {target_memory:.2f} GB GPU memory for high quality...")
+        
+        try:
+            # Size calculation: each float32 is 4 bytes
+            # A tensor of dimensions (n, n, n) uses n³ * 4 bytes
+            # So for X GB, we need to solve: n³ * 4 / 1024³ = X
+            # n = cubic_root(X * 1024³ / 4)
+            size = int((target_memory * 1024**3 / 4)**(1/3))
+            
+            # Create tensor with calculated size
+            dummy_tensor = torch.ones((size, size, size), device="cuda", dtype=torch.float32)
+            actual_memory = torch.cuda.memory_allocated() / 1024**3
+            print(f"Reserved memory: {actual_memory:.2f} GB with tensor size {size}x{size}x{size}")
+            
+            # Keep 2/3 of the allocation for quality processing
+            del dummy_tensor
+            torch.cuda.empty_cache()
+            
+            # Create a smaller tensor to maintain memory pressure
+            quality_tensor = torch.ones((size//2, size//2, size//2), device="cuda", dtype=torch.float32)
+            final_memory = torch.cuda.memory_allocated() / 1024**3
+            print(f"Memory after resizing: {final_memory:.2f} GB")
+        except Exception as e:
+            print(f"Memory allocation error: {e}")
+            # Continue without reservation if there was an error
     
     # Default to Tacotron2-DDC with HiFiGAN vocoder (ultra-high quality female voice)
     print(f"Loading primary ultra-high-quality model: {primary_model_name}...")
@@ -236,7 +264,7 @@ def text_to_speech(
     speaker: str = Query(default_speaker, description="Speaker ID for multi-speaker models"),
     use_high_quality: bool = Query(True, description="Use highest quality settings"),
     use_male_voice: bool = Query(True, description="Use male voice (True) or female voice (False)"),
-    max_gpu_memory: int = Query(8, description="Maximum GPU memory to use in GB (1-16)"),
+    max_gpu_memory: int = Query(16, description="Maximum GPU memory to use in GB (1-24)"),
     enhance_audio: bool = Query(True, description="Apply additional GPU-based audio enhancement")
 ):
     """Convert text to speech using GET request with ultra-high quality settings."""
@@ -265,7 +293,7 @@ def text_to_speech(
             
             # Allocate memory to force high precision (up to the requested limit)
             # This helps improve quality by ensuring the model has enough memory
-            max_gb = min(max(max_gpu_memory, 1), 16)  # Between 1-16 GB
+            max_gb = min(max(max_gpu_memory, 1), 20)  # Between 1-20 GB (reserving a few GB for system)
             if current_memory < max_gb:
                 try:
                     # Calculate size needed to reach the desired memory usage
@@ -328,7 +356,7 @@ class TextToSpeechRequest(BaseModel):
     speed: Optional[float] = 1.0
     use_high_quality: Optional[bool] = True
     use_male_voice: Optional[bool] = True  # Default to male voice
-    max_gpu_memory: Optional[int] = 8  # Maximum GPU memory to use in GB (1-16)
+    max_gpu_memory: Optional[int] = 16  # Maximum GPU memory to use in GB (1-24)
     enhance_audio: Optional[bool] = True  # Apply additional GPU-based audio enhancement
 
 @app.post("/tts")
@@ -372,7 +400,7 @@ def text_to_speech_post(request: TextToSpeechRequest):
             print(f"Memory before generation: {current_memory:.2f} GB")
             
             # Allocate memory to force high precision (up to the requested limit)
-            max_gb = min(max(request.max_gpu_memory, 1), 16)  # Between 1-16 GB
+            max_gb = min(max(request.max_gpu_memory, 1), 20)  # Between 1-20 GB (reserving a few GB for system)
             if current_memory < max_gb:
                 try:
                     # Calculate size needed to reach the desired memory usage

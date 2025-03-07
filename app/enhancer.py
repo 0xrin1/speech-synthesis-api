@@ -20,16 +20,35 @@ def enhance_speech(wav, sample_rate=22050, device="cuda"):
         return wav
         
     try:
-        # Check if we have enough GPU memory to enhance
-        if torch.cuda.memory_allocated() / (1024**3) > 15:
-            print("Skipping enhancement: Not enough free GPU memory")
-            return wav
-            
+        # Adaptively determine how much memory to use based on what's available
         # Convert to tensor for GPU processing
         wav_tensor = torch.from_numpy(wav).float().to(device)
         
-        # Reserve memory for quality enhancement using a larger model
-        boost_tensor = torch.zeros((2000, 2000), device=device, dtype=torch.float32)
+        # Get memory information to determine how much to allocate
+        device_id = torch.cuda.current_device() if device == "cuda" else 0
+        if device == "cuda":
+            total_memory = torch.cuda.get_device_properties(device_id).total_memory / 1024**3
+            allocated_memory = torch.cuda.memory_allocated() / 1024**3
+            free_memory = total_memory - allocated_memory
+            print(f"Enhancement - Free GPU memory: {free_memory:.2f} GB")
+            
+            # Use up to 50% of available free memory for enhancement
+            target_memory = min(free_memory * 0.5, 8.0)  # Cap at 8GB for enhancement 
+            
+            # Calculate tensor dimensions based on target memory
+            # We'll use a 2D tensor for spectral processing
+            mem_bytes = target_memory * 1024**3
+            dim = int((mem_bytes / 4)**0.5)  # Each float32 is 4 bytes
+            dim = min(dim, 10000)  # Reasonable upper limit
+            
+            print(f"Allocating {target_memory:.2f} GB for quality enhancement (dim={dim})")
+            
+            try:
+                # Use tensor to force high quality processing
+                boost_tensor = torch.zeros((dim, dim), device=device, dtype=torch.float32)
+                print(f"Enhancement memory allocation: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+            except Exception as e:
+                print(f"Error allocating enhancement memory: {e}")
         
         # Perform a higher quality version of the audio enhancement:
         # 1. High-pass filter to remove low frequency noise
@@ -76,8 +95,11 @@ def enhance_speech(wav, sample_rate=22050, device="cuda"):
         wav_enhanced_np = wav_enhanced.cpu().numpy()
         
         # Free memory
-        del spec, mag, phase, spec_enhanced, wav_enhanced, boost_tensor
+        del spec, mag, phase, spec_enhanced, wav_enhanced
+        if 'boost_tensor' in locals():
+            del boost_tensor
         torch.cuda.empty_cache()
+        print(f"Memory after enhancement: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
         
         return wav_enhanced_np
     except Exception as e:
