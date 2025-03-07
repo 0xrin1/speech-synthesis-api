@@ -12,8 +12,8 @@ fi
 # Create output directory
 mkdir -p output
 
-# Set config to production
-export SPEECH_API_CONFIG="config.production"
+# Set config to development
+export SPEECH_API_CONFIG="config.development"
 
-# Start the server
+# Start the server in development mode
 python -m src.server

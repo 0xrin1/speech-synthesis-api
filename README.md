@@ -1,14 +1,16 @@
 # Speech Synthesis API
 
-A GPU-accelerated API server for text-to-speech synthesis using state-of-the-art models from Coqui TTS.
+High-quality neural text-to-speech API with GPU acceleration and deep male voices.
 
 ## Features
 
-- Convert text to speech using GPU acceleration (if available)
-- Multiple voices support (depending on model)
+- High-quality speech synthesis using neural TTS models
+- Multiple voice options (female voice and various male voices)
+- GPU acceleration for fast processing
+- Audio enhancement for improved quality
 - Simple REST API with both GET and POST endpoints
-- Streaming audio output
-- Command-line client for testing and demonstration
+- Command-line clients for easy testing and interaction
+- Modular, maintainable architecture
 
 ## Quick Setup
 
@@ -26,11 +28,11 @@ A GPU-accelerated API server for text-to-speech synthesis using state-of-the-art
 ## Server Setup Options
 
 ```bash
-# Start with custom host and port
-./start_server.sh --host 127.0.0.1 --port 9000
+# Start production server (port 6000)
+./start_server.sh
 
-# Enable auto-reload for development
-./start_server.sh --reload
+# Start development server with auto-reload (port 8080)
+./scripts/start_dev_server.sh
 ```
 
 ## API Endpoints
@@ -41,8 +43,15 @@ Simple endpoint that accepts text as a query parameter.
 
 Example:
 ```
-GET http://localhost:6000/tts?text=Hello%20world
+GET http://localhost:6000/tts?text=Hello%20world&speaker=p311&use_male_voice=true
 ```
+
+Parameters:
+- `text`: Text to convert to speech (required)
+- `speaker`: Speaker ID for multi-speaker models (default: p311)
+- `use_male_voice`: Use male voice (true) or female voice (false)
+- `use_high_quality`: Use highest quality settings (default: true)
+- `enhance_audio`: Apply additional audio enhancement (default: true)
 
 ### POST /tts
 
@@ -51,16 +60,21 @@ Advanced endpoint that accepts JSON with text and optional parameters.
 Example:
 ```json
 POST http://localhost:6000/tts
+Content-Type: application/json
+
 {
   "text": "Hello world",
-  "voice_id": "p336",  # If supported by model
-  "speed": 1.0
+  "voice_id": "p311",
+  "speed": 1.0,
+  "use_high_quality": true,
+  "use_male_voice": true,
+  "enhance_audio": true
 }
 ```
 
 ## Client Usage
 
-The included test.py client can be used to test the API:
+### Test Client
 
 ```bash
 # Basic usage with default text
@@ -74,6 +88,59 @@ python test.py "Hello world" --server http://server-ip:6000
 
 # Custom output path
 python test.py "Hello world" --output ~/Desktop/speech.wav
+
+# Advanced options
+python test.py "Hello world" --advanced --speed 0.8 --female
+```
+
+### CLI Client
+
+```bash
+# Basic usage
+python -m src.client.cli_client "Hello world"
+
+# Advanced usage
+python -m src.client.cli_client "Hello world" --voice p364 --speed 1.2 --female
+```
+
+### Playback Client (with automatic audio playback)
+
+```bash
+# Play audio immediately
+python -m src.client.playback_client "Hello world"
+
+# Save to file without playing
+python -m src.client.playback_client "Hello world" --no-play --output ~/Desktop/speech.wav
+```
+
+## Project Structure
+
+```
+/speech-api/
+├── config/               # Configuration files
+├── src/                  # Source code
+│   ├── api/              # API endpoints and models
+│   ├── client/           # Client implementations
+│   ├── core/             # Core TTS functionality
+│   └── server.py         # Main server application
+├── scripts/              # Helper scripts
+├── output/               # Default output directory
+├── start_server.sh       # Production server script
+└── test.py               # Simple test client
+```
+
+## Configuration
+
+Configuration is stored in the `config` directory:
+
+- `default.py`: Base configuration
+- `development.py`: Development settings
+- `production.py`: Production settings
+
+Set the environment variable `SPEECH_API_CONFIG` to choose a configuration:
+
+```bash
+export SPEECH_API_CONFIG="config.development"
 ```
 
 ## Deployment
@@ -90,5 +157,5 @@ For production deployment:
 
 - Python 3.10+
 - Conda package manager
-- CUDA-capable GPU recommended for faster processing (but not required)
-- Approximately 2GB of RAM for model loading
+- CUDA-capable GPU recommended for faster processing (min 8GB VRAM)
+- Approximately 4GB of RAM for model loading
