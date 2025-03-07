@@ -6,6 +6,8 @@ import logging
 import io
 import numpy as np
 import torch
+import re
+import random
 from typing import Dict, Any, Optional
 
 from src.core.device_manager import DeviceManager
@@ -46,7 +48,8 @@ class TTSEngine:
         speaker: Optional[str] = None,
         speed: float = 1.0,
         enhance_audio: bool = True,
-        use_high_quality: bool = True
+        use_high_quality: bool = True,
+        jamaican_accent: bool = True
     ) -> io.BytesIO:
         """
         Generate speech from text.
@@ -58,6 +61,7 @@ class TTSEngine:
             speed: Speech speed factor (1.0 is normal)
             enhance_audio: Whether to apply additional audio enhancement
             use_high_quality: Whether to use highest quality settings
+            jamaican_accent: Whether to transform text to approximate Jamaican accent
             
         Returns:
             BytesIO object containing WAV audio data
@@ -98,7 +102,8 @@ class TTSEngine:
         wav = self._process_speech(
             model=model_to_use,
             text=text,
-            kwargs=kwargs
+            kwargs=kwargs,
+            jamaican_accent=jamaican_accent
         )
             
         # Free memory
@@ -122,7 +127,163 @@ class TTSEngine:
         
         return wav_bytes
     
-    def _process_speech(self, model, text: str, kwargs: Dict[str, Any]) -> np.ndarray:
+    def _jamaican_transformation(self, text: str) -> str:
+        """
+        Transform text to approximate Jamaican patois/creole pronunciation patterns.
+        
+        Args:
+            text: Original text
+            
+        Returns:
+            Text with Jamaican pronunciation patterns
+        """
+        # Common Jamaican patois word transformations
+        word_replacements = {
+            "the": "di",
+            "this": "dis",
+            "that": "dat",
+            "they": "dem",
+            "their": "dem",
+            "them": "dem",
+            "these": "dese",
+            "those": "dose",
+            "my": "mi",
+            "I am": "mi a",
+            "I'm": "mi a",
+            "I will": "mi will",
+            "I've": "mi ave",
+            "I have": "mi ave",
+            "you": "yuh",
+            "your": "yuh",
+            "we": "wi",
+            "are": "ah",
+            "is": "a",
+            "was": "did",
+            "were": "did deh",
+            "going to": "gwaan",
+            "going": "goin",
+            "want to": "waan",
+            "want": "waan",
+            "thing": "ting",
+            "think": "tink",
+            "something": "someting",
+            "nothing": "nutin",
+            "everything": "everyting",
+            "with": "wid",
+            "there": "deh",
+            "here": "yah",
+            "hello": "wah gwaan",
+            "hi": "ey",
+            "friend": "bredren",
+            "man": "mon",
+            "brother": "brudda",
+            "sister": "sista",
+            "people": "peeple dem",
+            "person": "bredda",
+            "understand": "undastand",
+            "food": "food",
+            "good": "good",
+            "very": "berry",
+            "really": "really",
+            "come on": "come nuh",
+            "come": "come",
+            "look": "look pon",
+            "what": "wah",
+            "what is": "wah a",
+            "yes": "yah mon",
+            "no": "no mon",
+            "alright": "irie",
+            "okay": "irie",
+            "ok": "irie",
+            "great": "irie",
+            "thanks": "respect",
+            "thank you": "respect",
+            "home": "yard",
+            "house": "yard",
+            "boy": "bwoy",
+            "girl": "gyal",
+            "children": "pickney dem",
+            "child": "pickney",
+            "know": "know",
+            "not": "nuh",
+            "don't": "nuh",
+            "today": "today",
+            "tomorrow": "tomorrow",
+            "yesterday": "yesterday",
+            "morning": "mawnin",
+            "evening": "evenin",
+            "day": "day",
+            "weather": "wedda",
+            "rain": "rain",
+            "sun": "sun",
+            "hot": "hot",
+            "cold": "cold",
+            "eat": "nyam",
+            "food": "food",
+            "money": "money",
+            "please": "please",
+            "much": "nuff"
+        }
+        
+        # Phrase replacements (must be applied first)
+        phrase_replacements = [
+            ("how are you", "how yuh stay"),
+            ("how are you doing", "how yuh deh gwaan"),
+            ("what's happening", "wah gwaan"),
+            ("what is happening", "wah gwaan"),
+            ("how is it going", "how it a go"),
+            ("I don't know", "mi nuh know"),
+            ("I don't want", "mi nuh waan"),
+            ("I don't have", "mi nuh ave"),
+            ("I don't like", "mi nuh like"),
+            ("come here", "come yah"),
+            ("over there", "ova deh"),
+            ("right now", "right now"),
+            ("a lot", "nuff"),
+            ("very good", "well good"),
+            ("very nice", "well nice"),
+            ("see you", "si yuh"),
+            ("see you later", "si yuh lata"),
+            ("thank you very much", "nuff respect"),
+            ("excuse me", "mi apologize"),
+            ("I'm sorry", "mi apologize")
+        ]
+        
+        # Apply phrase replacements first (these take priority)
+        transformed_text = text.lower()
+        for original, replacement in phrase_replacements:
+            transformed_text = transformed_text.replace(original, replacement)
+        
+        # Add spaces to catch words at start/end
+        transformed_text = " " + transformed_text + " "
+        
+        # Apply word replacements
+        for original, replacement in word_replacements.items():
+            # Use word boundary markers to replace only whole words
+            pattern = r'(\s)' + re.escape(original) + r'(\s|[.,!?;])'
+            transformed_text = re.sub(pattern, r'\1' + replacement + r'\2', transformed_text)
+            
+        # Remove the extra spaces we added
+        transformed_text = transformed_text.strip()
+        
+        # Add sentence-ending phrases randomly
+        if transformed_text.endswith("."):
+            ending_phrases = [
+                ", yah know?",
+                ", seen?",
+                ", yah mon.",
+                ", fi real.",
+                ", respect.",
+                "."
+            ]
+            # Replace the period with a random ending
+            import random
+            ending = random.choice(ending_phrases)
+            transformed_text = transformed_text[:-1] + ending
+        
+        return transformed_text
+    
+    def _process_speech(self, model, text: str, kwargs: Dict[str, Any], jamaican_accent: bool = False) -> np.ndarray:
         """
         Process speech with high quality settings using segmentation.
         
@@ -135,6 +296,12 @@ class TTSEngine:
             Numpy array containing the waveform
         """
         try:
+            # Apply Jamaican transformation to the text if enabled
+            if jamaican_accent:
+                original_text = text
+                text = self._jamaican_transformation(text)
+                logger.info(f"Jamaican transformation: '{original_text}' -> '{text}'")
+            
             # Process the text for highest quality results
             sentences = [s.strip() + "." for s in text.split('.') if s.strip()]
             if not sentences:
