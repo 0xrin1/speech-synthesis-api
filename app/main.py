@@ -22,14 +22,31 @@ def get_least_active_gpu():
     """Always use GPU device 2."""
     return 2
 
-# Check if CUDA is available and select least active GPU
+# Check CUDA availability (we might fall back to CPU if needed)
 if torch.cuda.is_available():
-    gpu_id = get_least_active_gpu()
-    device = f"cuda:{gpu_id}" if gpu_id is not None else "cuda:0"
-    print(f"CUDA available with {torch.cuda.device_count()} GPUs")
-    print(f"Selected GPU {gpu_id}: {torch.cuda.get_device_name(gpu_id)}")
+    # Force GPU 2
+    device = "cuda:2" 
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    print(f"Using CUDA device 2: {torch.cuda.get_device_name(2)}")
+    
+    # Verify we're actually using it
+    torch.cuda.set_device(2)
+    print(f"Active GPU: {torch.cuda.current_device()}")
+    
+    # Reserve maximum memory immediately
+    with torch.no_grad():
+        # Get total memory on GPU 2
+        total_memory = torch.cuda.get_device_properties(2).total_memory
+        # Reserve 90% of it
+        reserve_size = int(0.9 * total_memory)
+        # Create a tensor to hold the reservation
+        dummy = torch.empty(reserve_size, dtype=torch.uint8, device="cuda:2")
+        print(f"Reserved {reserve_size/1024**3:.1f}GB GPU memory")
 else:
-    device = "cpu"
+    # Fall back to CPU
+    device = "cpu" 
+    print("CUDA not available, using CPU instead")
+    
 print(f"Using device: {device}")
 
 # Initialize TTS model with maximal quality settings using GPU
@@ -39,24 +56,13 @@ try:
     primary_model_name = "tts_models/en/ljspeech/tacotron2-DDC"
     multi_speaker_model_name = "tts_models/en/vctk/vits"
     
-    # Use maximum GPU memory for highest quality
-    torch.cuda.empty_cache()
+    # Note: We already reserved maximum GPU memory earlier
     if torch.cuda.is_available():
-        # Get device properties to determine total memory
-        prop = torch.cuda.get_device_properties(gpu_id)
-        total_memory = prop.total_memory
+        print(f"Using maximum GPU memory for models")
+        print(f"Current memory usage: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
         
-        # Reserve 90% of available GPU memory to prevent fragmentation
-        reserve_memory_size = int(total_memory * 0.9)
-        # Create a large tensor to reserve memory
-        reserved_memory = torch.empty(reserve_memory_size, dtype=torch.uint8, device=device)
-        # Store this tensor as an app state variable to prevent garbage collection
-        app.state.reserved_memory = reserved_memory
-        print(f"Reserved {reserve_memory_size / 1024**3:.2f} GB of GPU memory")
-        
-        # Now free the cache but keep our reservation
-        torch.cuda.empty_cache()
-        print(f"Memory after reservation: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+        # Store the dummy tensor in app state to prevent garbage collection
+        app.state.reserved_memory = dummy
     
     # Default to Tacotron2-DDC with HiFiGAN vocoder (ultra-high quality female voice)
     print(f"Loading primary ultra-high-quality model: {primary_model_name}...")
