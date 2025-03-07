@@ -18,41 +18,46 @@ from enhancer import process_speech, enhance_speech
 # Initialize FastAPI
 app = FastAPI(title="Speech Synthesis API")
 
-def get_least_active_gpu():
-    """Always use GPU device 2."""
-    return 2
+# No longer needed as we always use GPU device 2
 
-# Check if CUDA is available and accessible
-try:
-    if torch.cuda.is_available():
-        # Force GPU 2
-        device = "cuda:2" 
-        os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-        print(f"Using CUDA device 2: {torch.cuda.get_device_name(2)}")
-        
-        # Verify we're actually using it
-        torch.cuda.set_device(2)
-        print(f"Active GPU: {torch.cuda.current_device()}")
-        
-        # Reserve maximum memory immediately
-        with torch.no_grad():
-            # Get total memory on GPU 2
-            total_memory = torch.cuda.get_device_properties(2).total_memory
-            # Reserve 90% of it
-            reserve_size = int(0.9 * total_memory)
-            # Create a tensor to hold the reservation
-            dummy = torch.empty(reserve_size, dtype=torch.uint8, device="cuda:2")
-            print(f"Reserved {reserve_size/1024**3:.1f}GB GPU memory")
-    else:
-        # Fall back to CPU if CUDA not available
-        device = "cpu"
-        print("CUDA not available, using CPU instead.")
-        print("Speech synthesis will be much slower without GPU acceleration.")
-except Exception as e:
-    # Handle permission issues or other CUDA errors
-    device = "cpu"
-    print(f"Error accessing CUDA: {e}")
-    print("Falling back to CPU mode (speech synthesis will be much slower).")
+def setup_device():
+    """Set up and configure the computation device (GPU or CPU)"""
+    try:
+        if torch.cuda.is_available():
+            # Force GPU 2
+            device = "cuda:2" 
+            os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+            print(f"Using CUDA device 2: {torch.cuda.get_device_name(2)}")
+            
+            # Verify we're actually using it
+            torch.cuda.set_device(2)
+            print(f"Active GPU: {torch.cuda.current_device()}")
+            
+            # Reserve maximum memory immediately
+            with torch.no_grad():
+                # Get total memory on GPU 2
+                total_memory = torch.cuda.get_device_properties(2).total_memory
+                # Reserve 90% of it
+                reserve_size = int(0.9 * total_memory)
+                # Create a tensor to hold the reservation
+                dummy = torch.empty(reserve_size, dtype=torch.uint8, device="cuda:2")
+                print(f"Reserved {reserve_size/1024**3:.1f}GB GPU memory")
+                
+                # Return both device and reservation tensor
+                return device, dummy
+        else:
+            # Fall back to CPU if CUDA not available
+            print("CUDA not available, using CPU instead.")
+            print("Speech synthesis will be much slower without GPU acceleration.")
+            return "cpu", None
+    except Exception as e:
+        # Handle permission issues or other CUDA errors
+        print(f"Error accessing CUDA: {e}")
+        print("Falling back to CPU mode (speech synthesis will be much slower).")
+        return "cpu", None
+
+# Set up device (GPU or CPU)
+device, memory_reservation = setup_device()
     
 print(f"Using device: {device}")
 
@@ -63,14 +68,14 @@ try:
     primary_model_name = "tts_models/en/ljspeech/tacotron2-DDC"
     multi_speaker_model_name = "tts_models/en/vctk/vits"
     
-    # Note: We already reserved maximum GPU memory earlier if possible
+    # Store memory reservation in app state to prevent garbage collection
     if device.startswith("cuda"):
         print(f"Using maximum GPU memory for models")
         print(f"Current memory usage: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
         
-        # Store the dummy tensor in app state to prevent garbage collection if it exists
-        if 'dummy' in locals():
-            app.state.reserved_memory = dummy
+        # Store the reservation tensor in app state
+        if memory_reservation is not None:
+            app.state.reserved_memory = memory_reservation
             print("Memory reservation is active")
     else:
         print("Running in CPU mode - no GPU memory to reserve")
@@ -222,71 +227,113 @@ def read_root():
         "examples": examples
     }
 
+def generate_speech(
+    text: str, 
+    use_male_voice: bool = True,
+    speaker: str = None, 
+    speed: float = 1.0,
+    enhance_audio: bool = True,
+    use_high_quality: bool = True
+):
+    """
+    Core speech generation function used by both GET and POST endpoints.
+    
+    Args:
+        text: Text to convert to speech
+        use_male_voice: Whether to use male voice (True) or female voice (False)
+        speaker: Speaker ID for multi-speaker models (male voice only)
+        speed: Speech speed factor (1.0 is normal)
+        enhance_audio: Whether to apply additional audio enhancement
+        use_high_quality: Whether to use highest quality settings
+        
+    Returns:
+        BytesIO object containing WAV audio data
+    """
+    if tts is None or multi_speaker_tts is None:
+        raise HTTPException(status_code=500, detail="TTS models failed to load")
+    
+    # Select the appropriate model based on voice preference
+    if use_male_voice:
+        # Use VITS multi-speaker model with male voice
+        model_to_use = multi_speaker_tts
+        
+        # Set up kwargs with speaker
+        chosen_speaker = speaker if speaker else default_speaker
+        
+        # Verify the speaker exists
+        if hasattr(model_to_use, "speakers"):
+            if chosen_speaker in model_to_use.speakers:
+                kwargs = {"speaker": chosen_speaker}
+            else:
+                # Fall back to default male speaker
+                kwargs = {"speaker": default_speaker}
+        else:
+            kwargs = {}
+    else:
+        # Use high-quality Tacotron2-DDC model (female voice)
+        model_to_use = tts
+        # No speaker parameter for single-speaker model
+        kwargs = {}
+    
+    # Apply speed adjustment if provided
+    if speed != 1.0 and hasattr(model_to_use.synthesizer, 'length_scale'):
+        # Convert speed to length_scale (inverse relationship)
+        kwargs['length_scale'] = 1.0 / speed
+        
+    # Prepare GPU if available
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        print("Using maximum quality settings with GPU device 2")
+    
+    # Generate speech
+    print(f"Processing speech with enhanced quality settings...")
+    wav = process_speech(
+        model=model_to_use, 
+        text=text, 
+        kwargs=kwargs, 
+        device=device
+    )
+        
+    # Free memory
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        
+    # Apply additional audio enhancement if requested
+    if enhance_audio and torch.cuda.is_available() and use_high_quality:
+        print("Applying additional audio enhancement...")
+        sample_rate = getattr(model_to_use.synthesizer, 'output_sample_rate', 22050)
+        wav = enhance_speech(wav, sample_rate=sample_rate, device=device)
+        
+    # Log memory usage after generation
+    if torch.cuda.is_available():
+        current_memory = torch.cuda.memory_allocated() / 1024**3
+        print(f"Memory after generation: {current_memory:.2f} GB")
+    
+    # Convert numpy array to bytes
+    wav_bytes = io.BytesIO()
+    model_to_use.synthesizer.save_wav(wav, wav_bytes)
+    wav_bytes.seek(0)
+    
+    return wav_bytes
+
 @app.get("/tts")
 def text_to_speech(
     text: str = Query(..., description="Text to convert to speech"),
     speaker: str = Query(default_speaker, description="Speaker ID for multi-speaker models"),
     use_high_quality: bool = Query(True, description="Use highest quality settings"),
     use_male_voice: bool = Query(True, description="Use male voice (True) or female voice (False)"),
-    max_gpu_memory: int = Query(24, description="Maximum GPU memory to use in GB (always max)"),
     enhance_audio: bool = Query(True, description="Apply additional GPU-based audio enhancement")
 ):
     """Convert text to speech using GET request with ultra-high quality settings."""
-    if tts is None or multi_speaker_tts is None:
-        raise HTTPException(status_code=500, detail="TTS models failed to load")
-    
     try:
-        # Select the appropriate model based on voice preference
-        if use_male_voice:
-            # Use VITS multi-speaker model with male voice
-            model_to_use = multi_speaker_tts
-            # Set up kwargs for TTS with speaker
-            kwargs = {"speaker": speaker if speaker else default_speaker}
-        else:
-            # Use high-quality Tacotron2-DDC model (female voice)
-            model_to_use = tts
-            # No speaker parameter for single-speaker model
-            kwargs = {}
-        
-        # Process GPU memory before generation
-        if torch.cuda.is_available():
-            # Clear cache to maximize available memory
-            torch.cuda.empty_cache()
-            print("Using maximum quality settings with GPU device 2")
-        
-        # Use our enhanced speech processor for maximum quality
-        # This takes advantage of the GPU and segments the text for better results
-        print(f"Processing speech with enhanced quality settings...")
-        wav = process_speech(
-            model=model_to_use, 
-            text=text, 
-            kwargs=kwargs, 
-            device=device
+        wav_bytes = generate_speech(
+            text=text,
+            use_male_voice=use_male_voice,
+            speaker=speaker,
+            enhance_audio=enhance_audio,
+            use_high_quality=use_high_quality
         )
-            
-        # Free memory
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            
-        # Apply additional audio enhancement if requested
-        if enhance_audio and torch.cuda.is_available() and use_high_quality:
-            print("Applying additional audio enhancement...")
-            # Our custom enhancer applies spectral processing on the GPU
-            # to further improve voice quality
-            sample_rate = getattr(model_to_use.synthesizer, 'output_sample_rate', 22050)
-            wav = enhance_speech(wav, sample_rate=sample_rate, device=device)
-            
-        # Process GPU memory after generation
-        if torch.cuda.is_available():
-            current_memory = torch.cuda.memory_allocated() / 1024**3
-            print(f"Memory after generation: {current_memory:.2f} GB")
         
-        # Convert numpy array to bytes
-        wav_bytes = io.BytesIO()
-        model_to_use.synthesizer.save_wav(wav, wav_bytes)
-        wav_bytes.seek(0)
-        
-        # Return audio file
         return StreamingResponse(
             wav_bytes, 
             media_type="audio/wav",
@@ -296,83 +343,27 @@ def text_to_speech(
         raise HTTPException(status_code=500, detail=f"Error generating speech: {str(e)}")
 
 class TextToSpeechRequest(BaseModel):
+    """Request model for POST /tts endpoint"""
     text: str
-    voice_id: Optional[str] = default_speaker  # Default speaker ID for male voice model
-    speed: Optional[float] = 1.0
-    use_high_quality: Optional[bool] = True
-    use_male_voice: Optional[bool] = True  # Default to male voice
-    max_gpu_memory: Optional[int] = 24  # Maximum GPU memory to use in GB (always max)
-    enhance_audio: Optional[bool] = True  # Apply additional GPU-based audio enhancement
+    voice_id: Optional[str] = default_speaker  # Speaker ID for multi-speaker models
+    speed: Optional[float] = 1.0               # Speech speed factor (1.0 is normal)
+    use_high_quality: Optional[bool] = True    # Use highest quality settings
+    use_male_voice: Optional[bool] = True      # Use male voice (True) or female voice (False)
+    enhance_audio: Optional[bool] = True       # Apply additional audio enhancement
 
 @app.post("/tts")
 def text_to_speech_post(request: TextToSpeechRequest):
     """Convert text to speech using POST request with ultra-high quality settings."""
-    if tts is None or multi_speaker_tts is None:
-        raise HTTPException(status_code=500, detail="TTS models failed to load")
-    
     try:
-        # Select the appropriate model based on voice preference
-        if request.use_male_voice:
-            # Use VITS multi-speaker model with male voice
-            model_to_use = multi_speaker_tts
-            # Set up kwargs with speaker
-            chosen_speaker = request.voice_id if request.voice_id else default_speaker
-            # Verify the speaker exists
-            if hasattr(model_to_use, "speakers"):
-                if chosen_speaker in model_to_use.speakers:
-                    kwargs = {"speaker": chosen_speaker}
-                else:
-                    # Fall back to default male speaker
-                    kwargs = {"speaker": default_speaker}
-            else:
-                kwargs = {}
-        else:
-            # Use high-quality Tacotron2-DDC model (female voice)
-            model_to_use = tts
-            # No speaker parameter for single-speaker model
-            kwargs = {}
-        
-        # Apply speed adjustment if provided
-        if request.speed != 1.0 and hasattr(model_to_use.synthesizer, 'length_scale'):
-            # Convert speed to length_scale (inverse relationship)
-            kwargs['length_scale'] = 1.0 / request.speed
-            
-        # Process GPU memory before generation
-        if torch.cuda.is_available():
-            # Clear cache to maximize available memory
-            torch.cuda.empty_cache()
-            print("Using maximum quality settings with GPU device 2")
-                    
-        # Use our enhanced speech processor for maximum quality
-        print(f"Processing speech with enhanced quality settings...")
-        wav = process_speech(
-            model=model_to_use, 
-            text=request.text, 
-            kwargs=kwargs, 
-            device=device
+        wav_bytes = generate_speech(
+            text=request.text,
+            use_male_voice=request.use_male_voice,
+            speaker=request.voice_id,
+            speed=request.speed,
+            enhance_audio=request.enhance_audio,
+            use_high_quality=request.use_high_quality
         )
-            
-        # Free memory
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            
-        # Apply additional audio enhancement if requested
-        if request.enhance_audio and torch.cuda.is_available() and request.use_high_quality:
-            print("Applying additional audio enhancement...")
-            sample_rate = getattr(model_to_use.synthesizer, 'output_sample_rate', 22050)
-            wav = enhance_speech(wav, sample_rate=sample_rate, device=device)
-            
-        # Process GPU memory after generation
-        if torch.cuda.is_available():
-            current_memory = torch.cuda.memory_allocated() / 1024**3
-            print(f"Memory after generation: {current_memory:.2f} GB")
         
-        # Convert numpy array to bytes
-        wav_bytes = io.BytesIO()
-        model_to_use.synthesizer.save_wav(wav, wav_bytes)
-        wav_bytes.seek(0)
-        
-        # Return audio file
         return StreamingResponse(
             wav_bytes, 
             media_type="audio/wav",
