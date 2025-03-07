@@ -7,7 +7,7 @@ from pydub.playback import play
 import io
 
 def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True, speaker="p326",
-             use_male_voice=True, use_high_quality=True, max_gpu_memory=8, enhance_audio=True):
+             use_male_voice=True, use_high_quality=True, max_gpu_memory=24, enhance_audio=True):
     """
     Send text to the speech API and either save or play the resulting audio.
     
@@ -19,7 +19,7 @@ def speak_text(text, server_url="http://localhost:8000", output_file=None, play_
         speaker (str): Speaker ID for multi-speaker models (default: p326)
         use_male_voice (bool): Use male voice (True) or female voice (False)
         use_high_quality (bool): Use highest quality settings
-        max_gpu_memory (int): Maximum GPU memory to use in GB (1-16)
+        max_gpu_memory (int): Maximum GPU memory to use in GB (1-24)
         enhance_audio (bool): Apply additional GPU-based audio enhancement
         
     Returns:
@@ -75,7 +75,7 @@ def speak_text(text, server_url="http://localhost:8000", output_file=None, play_
 
 def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost:8000", 
                   output_file=None, play_audio=True, use_male_voice=True,
-                  use_high_quality=True, max_gpu_memory=8, enhance_audio=True):
+                  use_high_quality=True, max_gpu_memory=24, enhance_audio=True):
     """
     Send text to the speech API using POST with more options and either save or play the resulting audio.
     
@@ -88,7 +88,7 @@ def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost
         play_audio (bool): Whether to play the audio immediately
         use_male_voice (bool): Use male voice (True) or female voice (False)
         use_high_quality (bool): Use highest quality settings
-        max_gpu_memory (int): Maximum GPU memory to use in GB (1-16)
+        max_gpu_memory (int): Maximum GPU memory to use in GB (1-24)
         enhance_audio (bool): Apply additional GPU-based audio enhancement
         
     Returns:
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--female", dest="use_male_voice", action="store_false", help="Use female voice")
     parser.add_argument("--high-quality", dest="use_high_quality", action="store_true", default=True, help="Use highest quality settings (default)")
     parser.add_argument("--low-quality", dest="use_high_quality", action="store_false", help="Use lower quality for faster generation")
-    parser.add_argument("--gpu-memory", dest="max_gpu_memory", type=int, default=8, help="Maximum GPU memory to use in GB (1-16, default: 8)")
+    parser.add_argument("--gpu-memory", dest="max_gpu_memory", type=int, default=24, help="Maximum GPU memory to use in GB (1-24, default: 24)")
     parser.add_argument("--enhance", dest="enhance_audio", action="store_true", default=True, help="Apply additional audio enhancement (default)")
     parser.add_argument("--no-enhance", dest="enhance_audio", action="store_false", help="Skip additional audio enhancement")
     

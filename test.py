@@ -4,7 +4,7 @@ import os
 import argparse
 
 def speak(text, server_url, output_file, speaker_id=None, use_male_voice=True, 
-        use_high_quality=True, max_gpu_memory=8, enhance_audio=True):
+        use_high_quality=True, max_gpu_memory=24, enhance_audio=True):
     """Call the TTS API and generate audio"""
     try:
         # Process output path - convert relative path to absolute if needed
@@ -71,8 +71,8 @@ if __name__ == "__main__":
                         help="Use highest quality settings (default)")
     parser.add_argument("--low-quality", dest="use_high_quality", action="store_false",
                         help="Use lower quality for faster generation")
-    parser.add_argument("--gpu-memory", dest="max_gpu_memory", type=int, default=8,
-                        help="Maximum GPU memory to use in GB (1-16, default: 8)")
+    parser.add_argument("--gpu-memory", dest="max_gpu_memory", type=int, default=24,
+                        help="Maximum GPU memory to use in GB (1-24, default: 24)")
     parser.add_argument("--enhance", dest="enhance_audio", action="store_true", default=True,
                         help="Apply additional audio enhancement (default)")
     parser.add_argument("--no-enhance", dest="enhance_audio", action="store_false",
