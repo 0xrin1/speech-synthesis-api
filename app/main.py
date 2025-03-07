@@ -42,7 +42,21 @@ try:
     # Use maximum GPU memory for highest quality
     torch.cuda.empty_cache()
     if torch.cuda.is_available():
-        print("Using maximum available GPU memory for highest quality output")
+        # Get device properties to determine total memory
+        prop = torch.cuda.get_device_properties(gpu_id)
+        total_memory = prop.total_memory
+        
+        # Reserve 90% of available GPU memory to prevent fragmentation
+        reserve_memory_size = int(total_memory * 0.9)
+        # Create a large tensor to reserve memory
+        reserved_memory = torch.empty(reserve_memory_size, dtype=torch.uint8, device=device)
+        # Store this tensor as an app state variable to prevent garbage collection
+        app.state.reserved_memory = reserved_memory
+        print(f"Reserved {reserve_memory_size / 1024**3:.2f} GB of GPU memory")
+        
+        # Now free the cache but keep our reservation
+        torch.cuda.empty_cache()
+        print(f"Memory after reservation: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
     
     # Default to Tacotron2-DDC with HiFiGAN vocoder (ultra-high quality female voice)
     print(f"Loading primary ultra-high-quality model: {primary_model_name}...")
