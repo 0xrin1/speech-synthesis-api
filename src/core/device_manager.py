@@ -65,6 +65,11 @@ class DeviceManager:
             os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
             logger.info(f"Using CUDA device {device_id}: {torch.cuda.get_device_name(device_id)}")
             
+            # Make sure we're not trying to access a non-existent device
+            if device_id >= torch.cuda.device_count():
+                logger.error(f"Invalid device ID {device_id}. Only {torch.cuda.device_count()} devices available.")
+                return "cpu", None
+                
             # Verify we're actually using it
             torch.cuda.set_device(device_id)
             logger.info(f"Active GPU: {torch.cuda.current_device()}")

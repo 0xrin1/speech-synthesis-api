@@ -28,7 +28,7 @@ High-quality neural text-to-speech API with GPU acceleration and deep male voice
 ## Server Setup Options
 
 ```bash
-# Start in production mode (port 6000)
+# Start in production mode with GPU acceleration (port 6000)
 ./start_server.sh
 
 # Start in development mode (port 8080, auto-reload enabled)
@@ -37,9 +37,16 @@ High-quality neural text-to-speech API with GPU acceleration and deep male voice
 # Start with debug logging enabled
 ./start_server.sh --debug
 
+# Start without GPU acceleration, even if available
+./start_server.sh --no-gpu
+
 # Combine options
 ./start_server.sh --dev --debug
 ```
+
+The server will automatically detect if GPU acceleration is available and use it. If you do not have sudo access or want to run without GPU acceleration, use the `--no-gpu` flag.
+
+**Note:** The server requires sudo access for GPU acceleration.
 
 ## API Endpoints
 

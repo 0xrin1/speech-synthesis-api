@@ -35,6 +35,7 @@ class TTSRouter:
         router.add_api_route("/", self.read_root, methods=["GET"])
         router.add_api_route("/tts", self.text_to_speech, methods=["GET"])
         router.add_api_route("/tts", self.text_to_speech_post, methods=["POST"])
+        self.router = router
     
     async def read_root(self):
         """Root endpoint showing API info."""
