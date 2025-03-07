@@ -34,20 +34,15 @@ class DeviceManager:
         Returns:
             Tuple containing (device_string, memory_reservation_tensor)
         """
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA not available. This system requires GPU acceleration.")
+            
         try:
-            if torch.cuda.is_available():
-                # Set up GPU
-                return self._setup_gpu()
-            else:
-                # Fall back to CPU
-                logger.warning("CUDA not available, using CPU instead.")
-                logger.warning("Speech synthesis will be much slower without GPU acceleration.")
-                return "cpu", None
+            # Set up GPU
+            return self._setup_gpu()
         except Exception as e:
-            # Handle permission issues or other CUDA errors
-            logger.error(f"Error accessing CUDA: {e}")
-            logger.warning("Falling back to CPU mode (speech synthesis will be much slower).")
-            return "cpu", None
+            # Propagate the error instead of falling back to CPU
+            raise RuntimeError(f"Failed to initialize GPU: {e}") from e
     
     def _setup_gpu(self) -> Tuple[str, torch.Tensor]:
         """
@@ -63,12 +58,12 @@ class DeviceManager:
             
             # Configure CUDA environment
             os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
-            logger.info(f"Using CUDA device {device_id}: {torch.cuda.get_device_name(device_id)}")
             
             # Make sure we're not trying to access a non-existent device
             if device_id >= torch.cuda.device_count():
-                logger.error(f"Invalid device ID {device_id}. Only {torch.cuda.device_count()} devices available.")
-                return "cpu", None
+                raise RuntimeError(f"Invalid GPU device ID {device_id}. Only {torch.cuda.device_count()} devices available.")
+            
+            logger.info(f"Using CUDA device {device_id}: {torch.cuda.get_device_name(device_id)}")
                 
             # Verify we're actually using it
             torch.cuda.set_device(device_id)

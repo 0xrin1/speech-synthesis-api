@@ -37,16 +37,13 @@ High-quality neural text-to-speech API with GPU acceleration and deep male voice
 # Start with debug logging enabled
 ./start_server.sh --debug
 
-# Start without GPU acceleration, even if available
-./start_server.sh --no-gpu
-
 # Combine options
 ./start_server.sh --dev --debug
 ```
 
-The server will automatically detect if GPU acceleration is available and use it. If you do not have sudo access or want to run without GPU acceleration, use the `--no-gpu` flag.
+**⚠️ IMPORTANT:** This server requires an NVIDIA GPU with at least 8GB VRAM. The server will fail to start if no GPU is detected. GPU acceleration requires sudo access.
 
-**Note:** The server requires sudo access for GPU acceleration.
+The server will automatically prompt for your password to gain the necessary permissions for GPU access.
 
 ## API Endpoints
 
@@ -171,5 +168,6 @@ For production deployment:
 
 - Python 3.10+
 - Conda package manager
-- CUDA-capable GPU recommended for faster processing (min 8GB VRAM)
+- NVIDIA GPU with CUDA support (minimum 8GB VRAM, 24GB+ recommended for best performance)
 - Approximately 4GB of RAM for model loading
+- Sudo access for GPU utilization

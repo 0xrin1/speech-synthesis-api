@@ -3,7 +3,6 @@
 # Default configuration
 MODE="production"
 DEBUG=false
-USE_GPU=true
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -22,35 +21,17 @@ while [[ $# -gt 0 ]]; do
       DEBUG=true
       shift
       ;;
-    --no-gpu)
-      USE_GPU=false
-      shift
-      ;;
     *)
       echo -e "${RED}Unknown option: $1${NC}"
-      echo "Usage: $0 [--dev] [--debug] [--no-gpu]"
+      echo "Usage: $0 [--dev] [--debug]"
       echo "  --dev     Start in development mode (port 8080, auto-reload)"
       echo "  --debug   Enable debug output"
-      echo "  --no-gpu  Don't use GPU acceleration, even if available"
       exit 1
       ;;
   esac
 done
 
-# Function to start server as the current user (no GPU)
-start_server_cpu() {
-    # Activate Conda environment if available
-    if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-        source "$HOME/miniconda3/etc/profile.d/conda.sh"
-        conda activate speech-api || echo "Environment 'speech-api' not found, skipping activation"
-    elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
-        source "$HOME/anaconda3/etc/profile.d/conda.sh"
-        conda activate speech-api || echo "Environment 'speech-api' not found, skipping activation"
-    fi
-
-    # Start the server
-    python -m src.server
-}
+# This server requires GPU acceleration - removed CPU fallback
 
 # Function to start server with GPU access (requires sudo)
 start_server_gpu() {
@@ -108,17 +89,17 @@ else
     export LOGLEVEL="INFO"
 fi
 
-# Check if we should try to use GPU
-if [ "$USE_GPU" = true ]; then
-    # Check if nvidia-smi is available
-    if command -v nvidia-smi &> /dev/null; then
-        echo -e "${GREEN}NVIDIA GPU detected, starting server with GPU acceleration${NC}"
-        start_server_gpu
-    else
-        echo -e "${RED}No NVIDIA GPU detected, falling back to CPU mode${NC}"
-        start_server_cpu
-    fi
-else
-    echo -e "${BLUE}Using CPU mode as requested${NC}"
-    start_server_cpu
+# Verify GPU is available, exit if not
+if ! command -v nvidia-smi &> /dev/null; then
+    echo -e "${RED}ERROR: No NVIDIA GPU detected. This server requires GPU acceleration.${NC}"
+    echo -e "${RED}Please make sure you have an NVIDIA GPU and the proper drivers installed.${NC}"
+    exit 1
 fi
+
+# Check GPU access permissions
+if ! sudo -n nvidia-smi &> /dev/null; then
+    echo -e "${RED}GPU detected but requires sudo permissions.${NC}"
+fi
+
+echo -e "${GREEN}NVIDIA GPU detected, starting server with GPU acceleration${NC}"
+start_server_gpu

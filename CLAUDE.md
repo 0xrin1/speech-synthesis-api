@@ -40,6 +40,7 @@ You are a senior full-stack developer. One of those rare 10x developers that has
 - Server runs on port 6000 (previously 8080)
 - Restart server: `kill [PID] && bash /home/claudecode/speech-api/start_server.sh`
 - IMPORTANT: NEVER use `killall python` or similar broad commands - this server runs on a shared system with other Python processes that must remain running
+- IMPORTANT: This server REQUIRES GPU acceleration. NEVER implement a CPU fallback as it would be too slow for practical use.
 
 # Client Usage
 - Test client: `python test.py "Hello world" --server http://localhost:6000`
