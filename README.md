@@ -28,11 +28,17 @@ High-quality neural text-to-speech API with GPU acceleration and deep male voice
 ## Server Setup Options
 
 ```bash
-# Start production server (port 6000)
+# Start in production mode (port 6000)
 ./start_server.sh
 
-# Start development server with auto-reload (port 8080)
-./scripts/start_dev_server.sh
+# Start in development mode (port 8080, auto-reload enabled)
+./start_server.sh --dev
+
+# Start with debug logging enabled
+./start_server.sh --debug
+
+# Combine options
+./start_server.sh --dev --debug
 ```
 
 ## API Endpoints
@@ -124,8 +130,9 @@ python -m src.client.playback_client "Hello world" --no-play --output ~/Desktop/
 │   ├── core/             # Core TTS functionality
 │   └── server.py         # Main server application
 ├── scripts/              # Helper scripts
+├── tests/                # Test suite
 ├── output/               # Default output directory
-├── start_server.sh       # Production server script
+├── start_server.sh       # Server startup script
 └── test.py               # Simple test client
 ```
 

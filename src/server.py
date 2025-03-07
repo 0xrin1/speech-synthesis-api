@@ -12,8 +12,9 @@ from src.core import DeviceManager, ModelLoader, TTSEngine
 from src.api import TTSRouter
 
 # Configure logging
+log_level = os.environ.get("LOGLEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
