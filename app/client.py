@@ -6,7 +6,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import io
 
-def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True, speaker="p335"):
+def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True, speaker="p326"):
     """
     Send text to the speech API and either save or play the resulting audio.
     
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", "-o", type=str, default="../output/speech.wav", help="Output WAV file path")
     parser.add_argument("--no-play", action="store_true", help="Don't play the audio")
     parser.add_argument("--voice", type=str, help="Voice ID to use (if supported)")
-    parser.add_argument("--speaker", type=str, default="p335", help="Speaker ID for multi-speaker models (default: p335)")
+    parser.add_argument("--speaker", type=str, default="p326", help="Speaker ID for multi-speaker models (default: p326, deep male voice)")
     parser.add_argument("--speed", type=float, default=1.0, help="Speech speed factor (1.0 is normal)")
     
     args = parser.parse_args()

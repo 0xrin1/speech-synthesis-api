@@ -54,8 +54,8 @@ if __name__ == "__main__":
                         help="Server URL (default: http://localhost:6000)")
     parser.add_argument("--output", "-o", default="./output/speech.wav", 
                         help="Output file path (default: ./output/speech.wav)")
-    parser.add_argument("--speaker", default="p335", 
-                        help="Speaker ID for multi-speaker models (default: p335)")
+    parser.add_argument("--speaker", default="p326", 
+                        help="Speaker ID for multi-speaker models (default: p326, deep male voice)")
     
     args = parser.parse_args()
     

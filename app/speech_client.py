@@ -40,7 +40,7 @@ def play_audio(audio_file):
         print(f"Error playing audio: {e}")
         return False
 
-def speak_text(text, server_url="http://localhost:6000", output_file=None, speaker="p335", play_audio_file=True):
+def speak_text(text, server_url="http://localhost:6000", output_file=None, speaker="p326", play_audio_file=True):
     """
     Send text to the speech API, save the resulting audio, and optionally play it.
     
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument("text", type=str, help="Text to convert to speech")
     parser.add_argument("--url", type=str, default="http://localhost:6000", help="URL of the speech API server")
     parser.add_argument("--output", "-o", type=str, default="../output/speech.wav", help="Output WAV file path. If not provided, a temporary file will be used.")
-    parser.add_argument("--speaker", type=str, default="p335", help="Speaker ID for multi-speaker models (default: p335)")
+    parser.add_argument("--speaker", type=str, default="p326", help="Speaker ID for multi-speaker models (default: p326, deep male voice)")
     parser.add_argument("--no-play", action="store_true", help="Don't play the audio after generating it")
     parser.add_argument("--save-only", action="store_true", help="Generate audio file without playing (same as --no-play)")
     
