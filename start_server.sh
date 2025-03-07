@@ -14,4 +14,4 @@ mkdir -p output
 
 # Start the server
 cd app
-python main.py --host 0.0.0.0 --port 8080 "$@"
+python main.py --host 0.0.0.0 --port 6000 "$@"

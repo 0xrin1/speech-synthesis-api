@@ -38,8 +38,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Text-to-Speech Client")
     parser.add_argument("text", nargs="?", default="Hello, I am Claude, your AI assistant. How can I help you today?", 
                         help="Text to convert to speech")
-    parser.add_argument("--server", "-s", default="http://localhost:8080", 
-                        help="Server URL (default: http://localhost:8080)")
+    parser.add_argument("--server", "-s", default="http://localhost:6000", 
+                        help="Server URL (default: http://localhost:6000)")
     parser.add_argument("--output", "-o", default="./output/speech.wav", 
                         help="Output file path (default: ./output/speech.wav)")
     

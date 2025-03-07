@@ -41,7 +41,7 @@ Simple endpoint that accepts text as a query parameter.
 
 Example:
 ```
-GET http://localhost:8080/tts?text=Hello%20world
+GET http://localhost:6000/tts?text=Hello%20world
 ```
 
 ### POST /tts
@@ -50,7 +50,7 @@ Advanced endpoint that accepts JSON with text and optional parameters.
 
 Example:
 ```json
-POST http://localhost:8080/tts
+POST http://localhost:6000/tts
 {
   "text": "Hello world",
   "voice_id": "p336",  # If supported by model
@@ -70,7 +70,7 @@ python test.py
 python test.py "Hello, this is a custom message"
 
 # Connect to a remote server
-python test.py "Hello world" --server http://server-ip:8080
+python test.py "Hello world" --server http://server-ip:6000
 
 # Custom output path
 python test.py "Hello world" --output ~/Desktop/speech.wav
@@ -83,8 +83,8 @@ For production deployment:
 1. Clone this repository on your server
 2. Run `./setup_env.sh` to install dependencies
 3. Start the server with `./start_server.sh`
-4. Make sure port 8080 is open in your firewall if accessing remotely
-5. Use the client with `python test.py --server http://your-server-ip:8080`
+4. Make sure port 6000 is open in your firewall if accessing remotely
+5. Use the client with `python test.py --server http://your-server-ip:6000`
 
 ## System Requirements
 
