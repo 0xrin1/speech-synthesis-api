@@ -35,24 +35,26 @@ done
 
 # Function to start server with GPU access (requires sudo)
 start_server_gpu() {
-    # Create the GPU config file
-    cat > /home/claudecode/speech-api/config/gpu_config.py << EOF
-"""
-GPU-specific configuration overrides.
-"""
-
-from config.${MODE} import *
-
-# Use GPU 2 which has less usage
-FORCE_GPU_DEVICE = 2
-EOF
-    
     # Start with sudo to get GPU access
     echo -e "${BLUE}Requesting sudo access to use GPU...${NC}"
+    
     sudo bash -c "
         # Set up environment
         source /home/claudecode/miniconda3/etc/profile.d/conda.sh
         conda activate speech-api
+        
+        # Create GPU config directly
+        mkdir -p /home/claudecode/speech-api/config
+        cat > /home/claudecode/speech-api/config/gpu_config.py << EOF
+\"\"\"
+GPU-specific configuration overrides.
+\"\"\"
+
+from config.${MODE} import *
+
+# Use GPU 0 since CUDA_VISIBLE_DEVICES remaps devices
+FORCE_GPU_DEVICE = 0
+EOF
         
         # Set environment variables
         export PYTHONPATH='/home/claudecode/speech-api'
@@ -87,6 +89,25 @@ if [ "$DEBUG" = true ]; then
     echo -e "${BLUE}Debug logging enabled${NC}"
 else
     export LOGLEVEL="INFO"
+fi
+
+# Check if port is already in use
+PORT=6000
+if [ "$MODE" = "development" ]; then
+    PORT=8080
+fi
+
+# Check and kill any process using our port
+if lsof -i:${PORT} > /dev/null; then
+    echo -e "${BLUE}Port ${PORT} is already in use. Stopping existing process...${NC}"
+    # Find PID of process using our port
+    PID=$(lsof -t -i:${PORT})
+    if [ ! -z "$PID" ]; then
+        echo -e "${BLUE}Stopping process ${PID}...${NC}"
+        kill ${PID}
+        # Wait for the port to be freed
+        sleep 3
+    fi
 fi
 
 # Verify GPU is available, exit if not
