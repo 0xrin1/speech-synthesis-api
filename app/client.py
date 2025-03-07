@@ -6,7 +6,8 @@ from pydub import AudioSegment
 from pydub.playback import play
 import io
 
-def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True, speaker="p326"):
+def speak_text(text, server_url="http://localhost:8000", output_file=None, play_audio=True, speaker="p326",
+             use_male_voice=True, use_high_quality=True, max_gpu_memory=8, enhance_audio=True):
     """
     Send text to the speech API and either save or play the resulting audio.
     
@@ -15,16 +16,30 @@ def speak_text(text, server_url="http://localhost:8000", output_file=None, play_
         server_url (str): URL of the speech synthesis server
         output_file (str, optional): Path to save the WAV file. If None, don't save.
         play_audio (bool): Whether to play the audio immediately
-        speaker (str): Speaker ID for multi-speaker models (default: p335)
+        speaker (str): Speaker ID for multi-speaker models (default: p326)
+        use_male_voice (bool): Use male voice (True) or female voice (False)
+        use_high_quality (bool): Use highest quality settings
+        max_gpu_memory (int): Maximum GPU memory to use in GB (1-16)
+        enhance_audio (bool): Apply additional GPU-based audio enhancement
         
     Returns:
         bool: True if successful, False otherwise
     """
     try:
-        # Simple GET request
+        # Set up parameters with GPU acceleration options
+        params = {
+            "text": text, 
+            "speaker": speaker,
+            "use_male_voice": use_male_voice,
+            "use_high_quality": use_high_quality,
+            "max_gpu_memory": max_gpu_memory,
+            "enhance_audio": enhance_audio
+        }
+        
+        # GET request with parameters
         response = requests.get(
             f"{server_url}/tts", 
-            params={"text": text, "speaker": speaker},
+            params=params,
             stream=True
         )
         
@@ -58,7 +73,9 @@ def speak_text(text, server_url="http://localhost:8000", output_file=None, play_
         print(f"Error communicating with speech API: {e}")
         return False
 
-def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost:8000", output_file=None, play_audio=True):
+def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost:8000", 
+                  output_file=None, play_audio=True, use_male_voice=True,
+                  use_high_quality=True, max_gpu_memory=8, enhance_audio=True):
     """
     Send text to the speech API using POST with more options and either save or play the resulting audio.
     
@@ -69,15 +86,23 @@ def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost
         server_url (str): URL of the speech synthesis server
         output_file (str, optional): Path to save the WAV file. If None, don't save.
         play_audio (bool): Whether to play the audio immediately
+        use_male_voice (bool): Use male voice (True) or female voice (False)
+        use_high_quality (bool): Use highest quality settings
+        max_gpu_memory (int): Maximum GPU memory to use in GB (1-16)
+        enhance_audio (bool): Apply additional GPU-based audio enhancement
         
     Returns:
         bool: True if successful, False otherwise
     """
     try:
-        # Create JSON payload
+        # Create JSON payload with GPU acceleration options
         payload = {
             "text": text,
-            "speed": speed
+            "speed": speed,
+            "use_male_voice": use_male_voice,
+            "use_high_quality": use_high_quality,
+            "max_gpu_memory": max_gpu_memory,
+            "enhance_audio": enhance_audio
         }
         
         if voice_id:
@@ -121,7 +146,7 @@ def post_speak_text(text, voice_id=None, speed=1.0, server_url="http://localhost
         return False
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Speech Synthesis API Client")
+    parser = argparse.ArgumentParser(description="Advanced Speech Synthesis API Client")
     parser.add_argument("text", type=str, help="Text to convert to speech")
     parser.add_argument("--url", type=str, default="http://localhost:6000", help="URL of the speech API server")
     parser.add_argument("--output", "-o", type=str, default="../output/speech.wav", help="Output WAV file path")
@@ -129,6 +154,15 @@ if __name__ == "__main__":
     parser.add_argument("--voice", type=str, help="Voice ID to use (if supported)")
     parser.add_argument("--speaker", type=str, default="p326", help="Speaker ID for multi-speaker models (default: p326, deep male voice)")
     parser.add_argument("--speed", type=float, default=1.0, help="Speech speed factor (1.0 is normal)")
+    
+    # GPU acceleration and quality options
+    parser.add_argument("--male", dest="use_male_voice", action="store_true", default=True, help="Use male voice (default)")
+    parser.add_argument("--female", dest="use_male_voice", action="store_false", help="Use female voice")
+    parser.add_argument("--high-quality", dest="use_high_quality", action="store_true", default=True, help="Use highest quality settings (default)")
+    parser.add_argument("--low-quality", dest="use_high_quality", action="store_false", help="Use lower quality for faster generation")
+    parser.add_argument("--gpu-memory", dest="max_gpu_memory", type=int, default=8, help="Maximum GPU memory to use in GB (1-16, default: 8)")
+    parser.add_argument("--enhance", dest="enhance_audio", action="store_true", default=True, help="Apply additional audio enhancement (default)")
+    parser.add_argument("--no-enhance", dest="enhance_audio", action="store_false", help="Skip additional audio enhancement")
     
     args = parser.parse_args()
     
@@ -153,14 +187,22 @@ if __name__ == "__main__":
             speed=args.speed,
             server_url=args.url,
             output_file=output_path,
-            play_audio=not args.no_play
+            play_audio=not args.no_play,
+            use_male_voice=args.use_male_voice,
+            use_high_quality=args.use_high_quality,
+            max_gpu_memory=args.max_gpu_memory,
+            enhance_audio=args.enhance_audio
         )
     else:
-        # Use simpler GET endpoint
+        # Use GET endpoint
         speak_text(
             args.text,
             server_url=args.url,
             output_file=output_path,
             play_audio=not args.no_play,
-            speaker=args.speaker
+            speaker=args.speaker,
+            use_male_voice=args.use_male_voice,
+            use_high_quality=args.use_high_quality,
+            max_gpu_memory=args.max_gpu_memory,
+            enhance_audio=args.enhance_audio
         )
