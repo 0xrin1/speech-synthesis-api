@@ -3,7 +3,8 @@ import sys
 import os
 import argparse
 
-def speak(text, server_url, output_file, speaker_id=None):
+def speak(text, server_url, output_file, speaker_id=None, use_male_voice=True, 
+        use_high_quality=True, max_gpu_memory=8, enhance_audio=True):
     """Call the TTS API and generate audio"""
     try:
         # Process output path - convert relative path to absolute if needed
@@ -17,7 +18,13 @@ def speak(text, server_url, output_file, speaker_id=None):
         os.makedirs(os.path.dirname(abs_output_file), exist_ok=True)
         
         # Set up parameters
-        params = {"text": text}
+        params = {
+            "text": text,
+            "use_male_voice": use_male_voice,
+            "use_high_quality": use_high_quality,
+            "max_gpu_memory": max_gpu_memory,
+            "enhance_audio": enhance_audio
+        }
         if speaker_id:
             params["speaker"] = speaker_id
         
@@ -54,9 +61,29 @@ if __name__ == "__main__":
                         help="Server URL (default: http://localhost:6000)")
     parser.add_argument("--output", "-o", default="./output/speech.wav", 
                         help="Output file path (default: ./output/speech.wav)")
-    parser.add_argument("--speaker", default="p326", 
-                        help="Speaker ID for multi-speaker models (default: p326, deep male voice)")
+    parser.add_argument("--speaker", default="p311", 
+                        help="Speaker ID for multi-speaker models (default: p311, deep male voice)")
+    parser.add_argument("--use-male-voice", dest="use_male_voice", action="store_true",
+                        help="Use male voice (default)")
+    parser.add_argument("--use-female-voice", dest="use_male_voice", action="store_false",
+                        help="Use female voice")
+    parser.add_argument("--high-quality", dest="use_high_quality", action="store_true", default=True,
+                        help="Use highest quality settings (default)")
+    parser.add_argument("--low-quality", dest="use_high_quality", action="store_false",
+                        help="Use lower quality for faster generation")
+    parser.add_argument("--gpu-memory", dest="max_gpu_memory", type=int, default=8,
+                        help="Maximum GPU memory to use in GB (1-16, default: 8)")
+    parser.add_argument("--enhance", dest="enhance_audio", action="store_true", default=True,
+                        help="Apply additional audio enhancement (default)")
+    parser.add_argument("--no-enhance", dest="enhance_audio", action="store_false",
+                        help="Skip additional audio enhancement")
+    
+    parser.set_defaults(use_male_voice=True, enhance_audio=True)
     
     args = parser.parse_args()
     
-    speak(args.text, args.server, args.output, args.speaker)
+    speak(args.text, args.server, args.output, args.speaker, 
+          use_male_voice=args.use_male_voice, 
+          use_high_quality=args.use_high_quality,
+          max_gpu_memory=args.max_gpu_memory,
+          enhance_audio=args.enhance_audio)
