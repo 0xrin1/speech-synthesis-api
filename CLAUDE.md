@@ -44,7 +44,9 @@ You are a senior full-stack developer. One of those rare 10x developers that has
 - Test client: `python test.py "Hello world" --server http://localhost:6000`
 - Remote client: `python test.py "Hello world" --server http://[server-ip]:6000 --output ./output/speech.wav`
 - Advanced client: `python app/client.py "Hello world" --url http://localhost:6000 --output ../output/speech.wav`
-- Simple client: `python app/speech_client.py "Hello world" --url http://localhost:6000 --output ../output/speech.wav`
+- Audio playback client: `python app/speech_client.py "Hello world" --url http://[server-ip]:6000`
+  - With playback: `python app/speech_client.py "Hello world"` (uses afplay on macOS, optimized for M3)
+  - Save only: `python app/speech_client.py "Hello world" --no-play --output ../output/custom.wav`
 
 # File Paths
 - All clients now use relative paths for output files
