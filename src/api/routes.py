@@ -53,8 +53,6 @@ class TTSRouter:
             "female_voice": "/tts?text=This is high quality female voice synthesis.&use_male_voice=false",
             "male_voice": "/tts?text=This is a deep male voice using neural speech synthesis.",
             "custom_male": f"/tts?text=This is a custom male voice.&speaker={self.default_speaker}",
-            "jamaican_accent": "/tts?text=Hello my friend, how are you doing today? The weather is nice.&jamaican_accent=true",
-            "no_jamaican_accent": "/tts?text=Hello my friend, how are you doing today?&jamaican_accent=false",
             "post_request": {
                 "url": "/tts",
                 "method": "POST",
@@ -63,8 +61,7 @@ class TTSRouter:
                     "voice_id": self.default_speaker,
                     "speed": 1.0,
                     "use_high_quality": True,
-                    "use_male_voice": True,
-                    "jamaican_accent": True
+                    "use_male_voice": True
                 }
             }
         }
@@ -81,8 +78,7 @@ class TTSRouter:
                 "speaker": f"Speaker ID for multi-speaker models (default: {self.default_speaker}, only used with male voice)",
                 "use_high_quality": "Use highest quality settings (default: true)",
                 "use_male_voice": "Use male voice (true) or female voice (false), default: true",
-                "speed": "Speech speed factor (POST only, default: 1.0)",
-                "jamaican_accent": "Transform text to approximate Jamaican accent (default: true)"
+                "speed": "Speech speed factor (POST only, default: 1.0)"
             },
             device=self.tts_engine.device_manager.device,
             models_loaded=self.tts_engine.model_loader.models_loaded(),
@@ -97,8 +93,7 @@ class TTSRouter:
         speaker: str = Query(None, description="Speaker ID for multi-speaker models"),
         use_high_quality: bool = Query(True, description="Use highest quality settings"),
         use_male_voice: bool = Query(True, description="Use male voice (True) or female voice (False)"),
-        enhance_audio: bool = Query(True, description="Apply additional GPU-based audio enhancement"),
-        jamaican_accent: bool = Query(True, description="Transform text to approximate Jamaican accent")
+        enhance_audio: bool = Query(True, description="Apply additional GPU-based audio enhancement")
     ):
         """Convert text to speech using GET request with ultra-high quality settings."""
         try:
@@ -110,8 +105,7 @@ class TTSRouter:
                 use_male_voice=use_male_voice,
                 speaker=speaker_to_use,
                 enhance_audio=enhance_audio,
-                use_high_quality=use_high_quality,
-                jamaican_accent=jamaican_accent
+                use_high_quality=use_high_quality
             )
             
             return StreamingResponse(
@@ -134,8 +128,7 @@ class TTSRouter:
                 speaker=speaker_to_use,
                 speed=request.speed,
                 enhance_audio=request.enhance_audio,
-                use_high_quality=request.use_high_quality,
-                jamaican_accent=request.jamaican_accent
+                use_high_quality=request.use_high_quality
             )
             
             return StreamingResponse(
