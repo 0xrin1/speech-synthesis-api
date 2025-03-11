@@ -57,9 +57,21 @@ You are a senior full-stack developer. One of those rare 10x developers that has
 - ALWAYS use relative paths for file operations to maintain portability
 
 # API Requirements
-- VITS model requires speaker parameter (default: 'p335')
-- GET endpoint: /tts?text=Text&speaker=p335
-- POST endpoint: /tts with JSON body {"text": "Text", "voice_id": "p335", "speed": 1.0}
+- VITS model requires speaker parameter (default: 'p230' - deep American male voice)
+- GET endpoint: /tts?text=Text&speaker=p230
+- POST endpoint: /tts with JSON body {"text": "Text", "voice_id": "p230", "speed": 1.0}
+
+# TTS Model Information
+- Using VITS multi-speaker model only (removed Tacotron2-DDC)
+- Speaker IDs range from p225-p376 (not all are available)
+- Notable speakers:
+  - p230: Deep American male voice (default)
+  - p311: Very deep, clear male voice (fallback)
+  - p313: Another good deep male voice
+  - p270: Alternative deep voice
+  - p240: Different voice character
+- Speaker IDs starting with 'p3' are mostly male voices
+- Speaker IDs starting with 'p2' include more female and diverse voices
 
 # Coding Guidelines
 Follow these guidelines to ensure your code is clean, maintainable, and adheres to best practices. Remember, less code is better. Lines of code = Debt.
