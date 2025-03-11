@@ -13,8 +13,8 @@ MEMORY_RESERVE_PERCENTAGE = 0.9  # Reserve 90% of available GPU memory
 
 # Model settings
 TTS_MODEL = "tts_models/en/vctk/vits"  # Multi-speaker VITS model
-DEFAULT_SPEAKER = "p311"  # Very deep, clear male voice
-FALLBACK_SPEAKER = "p326"  # Alternative deep male voice
+DEFAULT_SPEAKER = "p230"  # Deep American male voice
+FALLBACK_SPEAKER = "p311"  # Very deep, clear male voice
 
 # Audio settings
 DEFAULT_SAMPLE_RATE = 22050

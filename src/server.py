@@ -57,8 +57,8 @@ def create_app(config_module="config.production"):
     # Create model loader
     model_loader = ModelLoader(
         tts_model_name=getattr(config, "TTS_MODEL", "tts_models/en/vctk/vits"),
-        default_speaker=getattr(config, "DEFAULT_SPEAKER", "p311"),
-        fallback_speaker=getattr(config, "FALLBACK_SPEAKER", "p326"),
+        default_speaker=getattr(config, "DEFAULT_SPEAKER", "p230"),
+        fallback_speaker=getattr(config, "FALLBACK_SPEAKER", "p311"),
         device_manager=device_manager
     )
     
@@ -80,7 +80,7 @@ def create_app(config_module="config.production"):
     # Set up API routes
     tts_router = TTSRouter(
         tts_engine=tts_engine,
-        default_speaker=getattr(config, "DEFAULT_SPEAKER", "p311")
+        default_speaker=getattr(config, "DEFAULT_SPEAKER", "p230")
     )
     
     # Include router in app
