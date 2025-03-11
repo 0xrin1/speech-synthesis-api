@@ -9,10 +9,9 @@ from typing import Optional
 class TextToSpeechRequest(BaseModel):
     """Request model for POST /tts endpoint"""
     text: str = Field(..., description="Text to convert to speech")
-    voice_id: Optional[str] = Field(None, description="Speaker ID for multi-speaker models")
+    voice_id: Optional[str] = Field(None, description="Speaker ID for the VITS model")
     speed: Optional[float] = Field(1.0, description="Speech speed factor (1.0 is normal)")
     use_high_quality: Optional[bool] = Field(True, description="Use highest quality settings")
-    use_male_voice: Optional[bool] = Field(True, description="Use male voice (True) or female voice (False)")
     enhance_audio: Optional[bool] = Field(True, description="Apply additional audio enhancement")
 
 

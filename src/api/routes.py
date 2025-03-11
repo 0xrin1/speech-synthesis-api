@@ -45,14 +45,13 @@ class TTSRouter:
         # Get model information
         models_info = self.tts_engine.model_loader.get_models_info()
         
-        # Get some sample male speakers for examples
-        male_speakers = self.tts_engine.model_loader.get_male_speakers()[:5]
+        # Get some sample speakers for examples
+        speakers = self.tts_engine.model_loader.get_available_speakers()[:5]
         
         # API usage examples
         examples = {
-            "female_voice": "/tts?text=This is high quality female voice synthesis.&use_male_voice=false",
-            "male_voice": "/tts?text=This is a deep male voice using neural speech synthesis.",
-            "custom_male": f"/tts?text=This is a custom male voice.&speaker={self.default_speaker}",
+            "default_voice": "/tts?text=This is speech synthesis using the default speaker.",
+            "custom_voice": f"/tts?text=This is a custom voice.&speaker={self.default_speaker}",
             "post_request": {
                 "url": "/tts",
                 "method": "POST",
@@ -60,24 +59,22 @@ class TTSRouter:
                     "text": "This is an example of the POST endpoint with more options.",
                     "voice_id": self.default_speaker,
                     "speed": 1.0,
-                    "use_high_quality": True,
-                    "use_male_voice": True
+                    "use_high_quality": True
                 }
             }
         }
         
         return APIInfo(
             name="High-Quality Neural Speech Synthesis API",
-            description="API for converting text to speech using state-of-the-art neural models with GPU acceleration",
+            description="API for converting text to speech using state-of-the-art VITS model with GPU acceleration",
             endpoints={
                 "GET /tts": "Convert text to speech with query parameters",
                 "POST /tts": "Convert text to speech with JSON body"
             },
             parameters={
                 "text": "Text to convert to speech (required)",
-                "speaker": f"Speaker ID for multi-speaker models (default: {self.default_speaker}, only used with male voice)",
+                "speaker": f"Speaker ID for the VITS model (default: {self.default_speaker})",
                 "use_high_quality": "Use highest quality settings (default: true)",
-                "use_male_voice": "Use male voice (true) or female voice (false), default: true",
                 "speed": "Speech speed factor (POST only, default: 1.0)"
             },
             device=self.tts_engine.device_manager.device,
@@ -90,9 +87,8 @@ class TTSRouter:
     async def text_to_speech(
         self,
         text: str = Query(..., description="Text to convert to speech"),
-        speaker: str = Query(None, description="Speaker ID for multi-speaker models"),
+        speaker: str = Query(None, description="Speaker ID for the VITS model"),
         use_high_quality: bool = Query(True, description="Use highest quality settings"),
-        use_male_voice: bool = Query(True, description="Use male voice (True) or female voice (False)"),
         enhance_audio: bool = Query(True, description="Apply additional GPU-based audio enhancement")
     ):
         """Convert text to speech using GET request with ultra-high quality settings."""
@@ -102,7 +98,6 @@ class TTSRouter:
             
             wav_bytes = self.tts_engine.generate_speech(
                 text=text,
-                use_male_voice=use_male_voice,
                 speaker=speaker_to_use,
                 enhance_audio=enhance_audio,
                 use_high_quality=use_high_quality
@@ -124,7 +119,6 @@ class TTSRouter:
             
             wav_bytes = self.tts_engine.generate_speech(
                 text=request.text,
-                use_male_voice=request.use_male_voice,
                 speaker=speaker_to_use,
                 speed=request.speed,
                 enhance_audio=request.enhance_audio,

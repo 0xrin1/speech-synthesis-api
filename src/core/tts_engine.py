@@ -44,7 +44,6 @@ class TTSEngine:
     def generate_speech(
         self,
         text: str,
-        use_male_voice: bool = True,
         speaker: Optional[str] = None,
         speed: float = 1.0,
         enhance_audio: bool = True,
@@ -55,8 +54,7 @@ class TTSEngine:
         
         Args:
             text: Text to convert to speech
-            use_male_voice: Whether to use male voice (True) or female voice (False)
-            speaker: Speaker ID for multi-speaker models (male voice only)
+            speaker: Speaker ID for the VITS model
             speed: Speech speed factor (1.0 is normal)
             enhance_audio: Whether to apply additional audio enhancement
             use_high_quality: Whether to use highest quality settings
@@ -68,24 +66,17 @@ class TTSEngine:
             Exception: If speech generation fails
         """
         if not self.model_loader.models_loaded():
-            raise Exception("TTS models failed to load")
+            raise Exception("TTS model failed to load")
         
-        # Select the appropriate model based on voice preference
-        if use_male_voice:
-            # Use VITS multi-speaker model with male voice
-            model_to_use = self.model_loader.multi_speaker_model
-            
-            # Set up kwargs with speaker
-            chosen_speaker = speaker if speaker else self.model_loader.default_speaker
-            
-            # Verify the speaker exists
-            chosen_speaker = self.model_loader.validate_speaker(chosen_speaker)
-            kwargs = {"speaker": chosen_speaker}
-        else:
-            # Use high-quality Tacotron2-DDC model (female voice)
-            model_to_use = self.model_loader.primary_model
-            # No speaker parameter for single-speaker model
-            kwargs = {}
+        # Use VITS model with specified speaker
+        model_to_use = self.model_loader.model
+        
+        # Set up kwargs with speaker
+        chosen_speaker = speaker if speaker else self.model_loader.default_speaker
+        
+        # Verify the speaker exists
+        chosen_speaker = self.model_loader.validate_speaker(chosen_speaker)
+        kwargs = {"speaker": chosen_speaker}
         
         # Apply speed adjustment if provided
         if speed != 1.0 and hasattr(model_to_use.synthesizer, 'length_scale'):

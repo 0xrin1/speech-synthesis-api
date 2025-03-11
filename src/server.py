@@ -56,8 +56,7 @@ def create_app(config_module="config.production"):
     
     # Create model loader
     model_loader = ModelLoader(
-        primary_model_name=getattr(config, "PRIMARY_MODEL", "tts_models/en/ljspeech/tacotron2-DDC"),
-        multi_speaker_model_name=getattr(config, "MULTI_SPEAKER_MODEL", "tts_models/en/vctk/vits"),
+        tts_model_name=getattr(config, "TTS_MODEL", "tts_models/en/vctk/vits"),
         default_speaker=getattr(config, "DEFAULT_SPEAKER", "p311"),
         fallback_speaker=getattr(config, "FALLBACK_SPEAKER", "p326"),
         device_manager=device_manager

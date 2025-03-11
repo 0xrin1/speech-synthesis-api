@@ -12,8 +12,7 @@ FORCE_GPU_DEVICE = 2  # Always use GPU device 2
 MEMORY_RESERVE_PERCENTAGE = 0.9  # Reserve 90% of available GPU memory
 
 # Model settings
-PRIMARY_MODEL = "tts_models/en/ljspeech/tacotron2-DDC"  # High-quality female voice
-MULTI_SPEAKER_MODEL = "tts_models/en/vctk/vits"  # Multi-speaker with male voices
+TTS_MODEL = "tts_models/en/vctk/vits"  # Multi-speaker VITS model
 DEFAULT_SPEAKER = "p311"  # Very deep, clear male voice
 FALLBACK_SPEAKER = "p326"  # Alternative deep male voice
 
